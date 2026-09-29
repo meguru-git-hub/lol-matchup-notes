@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>LoL ガイド</title>
+  <title>解説 - LoL ガイド</title>
 
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23010a13'/%3E%3Cpath d='M16 4.5 27.5 16 16 27.5 4.5 16Z' fill='%23c8aa6e'/%3E%3C/svg%3E">
   <meta name="theme-color" content="#010a13">
@@ -31,36 +31,10 @@
   </header>
 
   <main class="container">
-
-    <!-- 見出し -->
-    <section class="hero">
-      <h1 class="hero-title">上手くなるために、調べたことを置いておく場所</h1>
-      <p class="hero-lead">
-        チャンプセレクトで使う対策シートと、レーンやマクロの解説をまとめています。
-      </p>
-    </section>
-
-    <!-- 一番よく使うものを大きく出す -->
-    <a class="feature" href="matchup.html">
-      <div class="feature-text">
-        <div class="feature-label">MATCHUP SHEET</div>
-        <h2 class="feature-title">マッチアップ対策シート</h2>
-        <p class="feature-lead">
-          相手のチャンプを選ぶと、レーン戦の方針・避けるスキル・仕掛けどきが出ます。
-          相手と自分のスキルは説明と動画つきで自動表示。
-        </p>
-      </div>
-      <span class="feature-go">開く →</span>
-    </a>
-
-    <!-- 記事の分類 -->
-    <h2 class="section-title">解説</h2>
-    <div id="categoryGrid" class="cat-grid"></div>
-
-    <!-- 新しい記事 -->
-    <h2 class="section-title">新しい記事</h2>
-    <div id="recentList" class="article-list"></div>
-
+    <!-- 中身は guide.js が作る。
+         guide.html?cat=macro なら分類の一覧、
+         guide.html?id=wave-basics なら記事そのものが出る。 -->
+    <div id="guideRoot"></div>
   </main>
 
   <footer class="footer">
@@ -71,5 +45,6 @@
   <script src="articles.js"></script>
   <script src="nav.js"></script>
   <script src="home.js"></script>
+  <script src="guide.js"></script>
 </body>
 </html>

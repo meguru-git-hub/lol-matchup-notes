@@ -301,9 +301,12 @@ textarea:focus {
    そのまま scrollIntoView でスクロールすると、シートの上端が
    ヘッダーの下に潜りこんで見えなくなる。
    scroll-margin-top を入れておくと、その分だけ手前で止まってくれる。
-   値はヘッダーの高さ(60px)＋すこし余白。 */
+
+   ヘッダーの高さは画面の幅で変わる（メニューが折り返す）ので、
+   nav.js が実際に測った値を --header-h に入れてくれる。
+   まだ測れていないときのために、控えの値も書いてある。 */
 .sheet,
-#editor { scroll-margin-top: 76px; }
+#editor { scroll-margin-top: calc(var(--header-h, 100px) + 16px); }
 
 /* パネルの四隅に金色のかぎ括弧を出す（LoL のUIらしい枠の飾り） */
 .sheet::before,
@@ -1127,3 +1130,470 @@ textarea:focus {
 }
 
 .footer p { margin: 3px 0; }
+
+/* ===========================================================
+   ここから下は、サイト全体（トップページ・解説ページ）のスタイル
+   =========================================================== */
+
+/* -------------------------------------------
+   ヘッダーのメニュー
+   ------------------------------------------- */
+.brand {
+  text-decoration: none;
+  color: inherit;
+}
+
+.nav {
+  display: flex;
+  gap: 2px;
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 0 10px 6px;
+  /* 画面が狭いときは横に流して、はみ出さないようにする */
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.nav::-webkit-scrollbar { display: none; }
+
+.nav-link {
+  flex: 0 0 auto;
+  padding: 5px 12px;
+  color: var(--muted);
+  font-size: 12.5px;
+  text-decoration: none;
+  border-bottom: 2px solid transparent;
+  white-space: nowrap;
+}
+
+.nav-link:hover { color: var(--gold-lit); }
+
+/* いま見ているページ */
+.nav-link.is-here {
+  color: var(--gold-lit);
+  border-bottom-color: var(--gold);
+  font-weight: 700;
+}
+
+/* -------------------------------------------
+   ページ冒頭の見出し
+   ------------------------------------------- */
+.hero { padding: 14px 0 20px; }
+
+.hero-title {
+  margin: 0 0 6px;
+  font-size: 22px;
+  line-height: 1.5;
+  color: var(--gold-lit);
+}
+
+.hero-lead {
+  margin: 0;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.section-title {
+  margin: 26px 0 12px;
+  font-size: 14px;
+  letter-spacing: 0.1em;
+  color: var(--gold-lit);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.section-title::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  background: var(--gold);
+  transform: rotate(45deg);
+  flex: 0 0 auto;
+}
+
+/* -------------------------------------------
+   トップの大きなカード（マッチアップへの入口）
+   ------------------------------------------- */
+.feature {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 20px;
+  background: linear-gradient(110deg, rgba(200,170,110,0.13), var(--panel) 55%);
+  border: 1px solid var(--gold-dim);
+  text-decoration: none;
+  color: inherit;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.feature:hover {
+  border-color: var(--gold);
+  background: linear-gradient(110deg, rgba(200,170,110,0.2), var(--panel) 55%);
+}
+
+/* 四隅のかぎ括弧（対策シートと同じ飾り） */
+.feature::before,
+.feature::after {
+  content: "";
+  position: absolute;
+  width: 13px;
+  height: 13px;
+  pointer-events: none;
+}
+
+.feature::before {
+  top: -1px; left: -1px;
+  border-top: 2px solid var(--gold);
+  border-left: 2px solid var(--gold);
+}
+
+.feature::after {
+  bottom: -1px; right: -1px;
+  border-bottom: 2px solid var(--gold);
+  border-right: 2px solid var(--gold);
+}
+
+.feature-text { flex: 1; min-width: 200px; }
+
+.feature-label {
+  font-family: var(--font-en);
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  color: var(--gold);
+}
+
+.feature-title {
+  margin: 2px 0 6px;
+  font-size: 19px;
+  color: var(--gold-lit);
+}
+
+.feature-lead {
+  margin: 0;
+  font-size: 13.5px;
+  color: var(--muted);
+  line-height: 1.7;
+}
+
+.feature-go {
+  flex: 0 0 auto;
+  padding: 8px 18px;
+  border: 1px solid var(--gold);
+  color: var(--gold-lit);
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+/* -------------------------------------------
+   分類のカード
+   ------------------------------------------- */
+.cat-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 9px;
+}
+
+@media (max-width: 620px) {
+  .cat-grid { grid-template-columns: 1fr; }
+}
+
+.cat-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 13px 15px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  text-decoration: none;
+  color: inherit;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.cat-card:hover {
+  border-color: var(--gold-dim);
+  background: rgba(200,170,110,0.05);
+}
+
+.cat-icon { font-size: 21px; flex: 0 0 auto; }
+
+.cat-text { flex: 1; min-width: 0; }
+
+.cat-name {
+  display: block;
+  font-size: 14.5px;
+  font-weight: 700;
+  color: var(--gold-lit);
+}
+
+.cat-lead {
+  display: block;
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.cat-count {
+  flex: 0 0 auto;
+  font-size: 11px;
+  color: var(--gold);
+  border: 1px solid var(--gold-dim);
+  padding: 1px 9px;
+  white-space: nowrap;
+}
+
+/* まだ記事が無い分類 */
+.cat-count.is-empty {
+  color: var(--faint);
+  border-color: var(--line);
+}
+
+/* -------------------------------------------
+   記事の一覧
+   ------------------------------------------- */
+.article-list {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.article-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 15px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--gold-dim);
+  text-decoration: none;
+  color: inherit;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.article-row:hover {
+  border-left-color: var(--gold);
+  background: rgba(200,170,110,0.05);
+}
+
+.article-tag {
+  flex: 0 0 auto;
+  font-size: 10.5px;
+  color: var(--gold);
+  border: 1px solid var(--gold-dim);
+  padding: 1px 8px;
+  margin-top: 2px;
+  white-space: nowrap;
+}
+
+.article-text { flex: 1; min-width: 0; }
+
+.article-title {
+  display: block;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--gold-lit);
+}
+
+.article-summary {
+  display: block;
+  font-size: 12.5px;
+  color: var(--muted);
+  line-height: 1.65;
+}
+
+.article-date {
+  flex: 0 0 auto;
+  font-size: 11px;
+  color: var(--faint);
+  margin-top: 3px;
+  white-space: nowrap;
+}
+
+@media (max-width: 520px) {
+  .article-date { display: none; }
+}
+
+/* -------------------------------------------
+   道しるべ（ホーム › マクロ解説）
+   ------------------------------------------- */
+.crumb {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 14px 0 10px;
+  font-size: 12px;
+  color: var(--faint);
+}
+
+.crumb a {
+  color: var(--muted);
+  text-decoration: none;
+}
+
+.crumb a:hover { color: var(--gold-lit); }
+
+/* -------------------------------------------
+   記事そのもの
+   ------------------------------------------- */
+.paper { padding: 22px 24px 28px; }
+
+@media (max-width: 520px) {
+  .paper { padding: 18px 16px 22px; }
+}
+
+.paper-title {
+  margin: 0 0 6px;
+  font-size: 23px;
+  line-height: 1.45;
+  color: var(--gold-lit);
+}
+
+.paper-meta {
+  font-size: 11.5px;
+  color: var(--faint);
+  letter-spacing: 0.04em;
+}
+
+.paper-summary {
+  margin: 14px 0 24px;
+  padding: 12px 15px;
+  background: var(--inset);
+  border-left: 3px solid var(--gold);
+  font-size: 14px;
+  line-height: 1.8;
+}
+
+/* 記事の中の見出し */
+.paper-h {
+  margin: 30px 0 10px;
+  padding-bottom: 7px;
+  font-size: 16px;
+  color: var(--gold-lit);
+  border-bottom: 1px solid var(--line);
+}
+
+.paper-p {
+  margin: 0 0 13px;
+  font-size: 14.5px;
+  line-height: 1.95;
+}
+
+.paper-list {
+  margin: 0 0 13px;
+  padding-left: 22px;
+  font-size: 14.5px;
+  line-height: 1.9;
+}
+
+.paper-list li { margin-bottom: 4px; }
+
+.paper-list li::marker { color: var(--gold); }
+
+/* 目立たせたい補足 */
+.paper-note {
+  margin: 0 0 15px;
+  padding: 13px 16px;
+  background: rgba(10,200,185,0.07);
+  border: 1px solid rgba(10,200,185,0.3);
+  border-left: 3px solid var(--teal);
+  font-size: 14px;
+  line-height: 1.8;
+}
+
+/* 文中の 強調 */
+.paper-strong {
+  color: var(--gold);
+  font-weight: 700;
+}
+
+/* 表 */
+.paper-table-wrap {
+  margin: 0 0 15px;
+  overflow-x: auto;   /* 狭い画面では表だけ横にスクロールさせる */
+}
+
+.paper-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13.5px;
+  min-width: 380px;
+}
+
+.paper-table th,
+.paper-table td {
+  padding: 9px 12px;
+  border: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+
+.paper-table th {
+  background: var(--inset);
+  color: var(--gold);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.paper-table tbody tr:nth-child(even) td {
+  background: rgba(255,255,255,0.015);
+}
+
+/* -------------------------------------------
+   記事がまだ無いとき
+   ------------------------------------------- */
+.empty-guide {
+  text-align: center;
+  padding: 30px 20px;
+}
+
+.empty-guide p {
+  margin: 0 0 8px;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.empty-guide-hint {
+  font-size: 12px !important;
+  color: var(--faint) !important;
+}
+
+.empty-guide .btn {
+  display: inline-block;
+  margin-top: 8px;
+  text-decoration: none;
+}
+
+/* -------------------------------------------
+   ほかの分類へのリンク
+   ------------------------------------------- */
+.other-cats {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-wrap: wrap;
+  margin-top: 26px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+}
+
+.other-label {
+  font-size: 11px;
+  color: var(--faint);
+  letter-spacing: 0.08em;
+  margin-right: 3px;
+}
+
+.other-link {
+  font-size: 12.5px;
+  color: var(--muted);
+  text-decoration: none;
+  border: 1px solid var(--line);
+  padding: 4px 11px;
+}
+
+.other-link:hover {
+  color: var(--gold-lit);
+  border-color: var(--gold-dim);
+}
