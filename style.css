@@ -1,0 +1,376 @@
+/* ===========================================
+   色などの設定（ここを変えれば全体の色が変わる）
+   =========================================== */
+:root {
+  --bg:        #10131a;   /* ページの背景 */
+  --card:      #1a1f2b;   /* カードの背景 */
+  --border:    #2c3446;   /* 枠線 */
+  --text:      #e6e9f0;   /* 文字 */
+  --muted:     #8b95a9;   /* 薄い文字 */
+  --gold:      #c8aa6e;   /* LoLっぽい金色（見出し） */
+  --blue:      #3c8cf0;   /* ボタンなどの青 */
+  --red:       #e0555a;   /* 削除ボタンの赤 */
+}
+
+/* ===========================================
+   全体のリセットと基本設定
+   =========================================== */
+* {
+  box-sizing: border-box;   /* 幅の計算をわかりやすくする */
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: "Segoe UI", "Hiragino Sans", "Meiryo", sans-serif;
+  line-height: 1.7;
+}
+
+/* ===========================================
+   ヘッダー
+   =========================================== */
+.header {
+  padding: 32px 16px 24px;
+  text-align: center;
+  border-bottom: 1px solid var(--border);
+}
+
+.header h1 {
+  margin: 0;
+  font-size: 28px;
+  color: var(--gold);
+  letter-spacing: 0.04em;
+}
+
+.header .sub {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+/* ===========================================
+   中身の入れ物
+   =========================================== */
+.container {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 24px 16px 48px;
+}
+
+/* 各セクションのカード */
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+.card h2 {
+  margin: 0 0 16px;
+  font-size: 18px;
+  color: var(--gold);
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 10px;
+}
+
+.card h3 {
+  margin: 0 0 10px;
+  font-size: 14px;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+/* ===========================================
+   チャンピオン選択エリア
+   =========================================== */
+.loading {
+  color: var(--muted);
+  font-size: 14px;
+  margin: 0 0 16px;
+}
+
+.pickers {
+  display: grid;
+  grid-template-columns: 1fr 1fr;   /* 左右2列に並べる */
+  gap: 20px;
+}
+
+/* 画面が狭いときは縦に1列で並べる */
+@media (max-width: 640px) {
+  .pickers {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* 「いま選んでいるチャンプ」の表示 */
+.selected-box {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #131722;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 12px;
+  margin-bottom: 10px;
+  min-height: 56px;
+}
+
+.selected-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 6px;
+  border: 1px solid var(--gold);
+}
+
+.selected-name {
+  font-weight: 600;
+}
+
+/* 検索ボックス */
+.search {
+  width: 100%;
+  padding: 9px 12px;
+  background: #131722;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  font-size: 14px;
+  margin-bottom: 10px;
+}
+
+.search:focus {
+  outline: none;
+  border-color: var(--blue);
+}
+
+/* チャンピオンのアイコンを並べる場所 */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(48px, 1fr));
+  gap: 6px;
+  max-height: 260px;
+  overflow-y: auto;            /* 多いのでスクロールさせる */
+  padding: 6px;
+  background: #0d1017;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+/* 1つ1つのチャンピオンボタン */
+.champ {
+  border: 2px solid transparent;
+  border-radius: 6px;
+  padding: 0;
+  background: none;
+  cursor: pointer;
+  line-height: 0;
+}
+
+.champ img {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  border-radius: 4px;
+  display: block;
+}
+
+.champ:hover {
+  border-color: var(--blue);
+}
+
+/* 選ばれているチャンピオンは金色の枠にする */
+.champ.is-selected {
+  border-color: var(--gold);
+}
+
+/* ===========================================
+   メモ入力エリア
+   =========================================== */
+.matchup-title {
+  margin: 0 0 16px;
+  padding: 10px 14px;
+  background: #131722;
+  border-left: 3px solid var(--gold);
+  border-radius: 4px;
+  font-weight: 600;
+}
+
+.field {
+  margin-bottom: 16px;
+}
+
+.field label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.field textarea {
+  width: 100%;
+  padding: 10px 12px;
+  background: #131722;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 14px;
+  resize: vertical;
+}
+
+.field textarea:focus {
+  outline: none;
+  border-color: var(--blue);
+}
+
+/* ===========================================
+   ボタン
+   =========================================== */
+.buttons {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.btn {
+  padding: 10px 18px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 14px;
+  font-family: inherit;
+  cursor: pointer;
+  background: #232a39;
+  color: var(--text);
+}
+
+.btn:hover {
+  filter: brightness(1.15);
+}
+
+.btn-primary {
+  background: var(--blue);
+  border-color: var(--blue);
+  color: #fff;
+  font-weight: 600;
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--muted);
+}
+
+.save-message {
+  margin: 12px 0 0;
+  font-size: 14px;
+  color: #6ddf8e;
+  min-height: 20px;
+}
+
+/* ===========================================
+   保存済み一覧エリア
+   =========================================== */
+.saved-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.empty {
+  color: var(--muted);
+  font-size: 14px;
+  margin: 0;
+}
+
+/* 保存済み1件分 */
+.saved-item {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #131722;
+  padding: 12px 14px;
+}
+
+.saved-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.saved-icons {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.saved-icons img {
+  width: 34px;
+  height: 34px;
+  border-radius: 5px;
+}
+
+.saved-vs {
+  color: var(--gold);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.saved-names {
+  font-weight: 600;
+  flex: 1;              /* 残りの幅を使ってボタンを右に押しやる */
+  min-width: 140px;
+}
+
+.saved-date {
+  display: block;
+  font-size: 12px;
+  color: var(--muted);
+  font-weight: 400;
+}
+
+.saved-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.btn-small {
+  padding: 6px 12px;
+  font-size: 13px;
+}
+
+.btn-delete {
+  background: transparent;
+  border-color: var(--red);
+  color: var(--red);
+}
+
+/* メモ本文 */
+.saved-body {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--border);
+  font-size: 14px;
+}
+
+.saved-body dt {
+  color: var(--gold);
+  font-size: 13px;
+  font-weight: 600;
+  margin-top: 8px;
+}
+
+.saved-body dd {
+  margin: 2px 0 0;
+  white-space: pre-wrap;   /* 改行をそのまま表示する */
+  color: var(--text);
+}
+
+/* ===========================================
+   フッター
+   =========================================== */
+.footer {
+  text-align: center;
+  padding: 20px 16px 40px;
+  color: var(--muted);
+  font-size: 12px;
+}

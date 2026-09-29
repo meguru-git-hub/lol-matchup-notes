@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LoL マッチアップノート</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- ===== ヘッダー ===== -->
+  <header class="header">
+    <h1>LoL マッチアップノート</h1>
+    <p class="sub">自分のチャンプ × 相手のチャンプ ごとにメモを残そう</p>
+  </header>
+
+  <main class="container">
+
+    <!-- ===== 1. チャンピオン選択エリア ===== -->
+    <section class="card">
+      <h2>1. チャンピオンを選ぶ</h2>
+
+      <!-- 読み込み中／エラー表示用 -->
+      <p id="loadingMessage" class="loading">チャンピオン一覧を読み込み中…</p>
+
+      <div class="pickers">
+
+        <!-- 自分のチャンプ -->
+        <div class="picker">
+          <h3>自分のチャンプ</h3>
+          <div class="selected-box">
+            <img id="myIcon" class="selected-icon" alt="" hidden>
+            <span id="myName" class="selected-name">未選択</span>
+          </div>
+          <input type="text" id="mySearch" class="search" placeholder="名前で検索（例: ヤスオ / yasuo）">
+          <div id="myGrid" class="grid"></div>
+        </div>
+
+        <!-- 相手のチャンプ -->
+        <div class="picker">
+          <h3>相手のチャンプ</h3>
+          <div class="selected-box">
+            <img id="enemyIcon" class="selected-icon" alt="" hidden>
+            <span id="enemyName" class="selected-name">未選択</span>
+          </div>
+          <input type="text" id="enemySearch" class="search" placeholder="名前で検索（例: ダリウス / darius）">
+          <div id="enemyGrid" class="grid"></div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ===== 2. メモ入力エリア ===== -->
+    <section class="card">
+      <h2>2. メモを書く</h2>
+
+      <p id="matchupTitle" class="matchup-title">両方のチャンプを選んでください</p>
+
+      <div class="field">
+        <label for="avoidSkill">⚠️ 避けるべきスキル</label>
+        <textarea id="avoidSkill" rows="3" placeholder="例: Qの先端を絶対に踏まない。Eは横に避ける"></textarea>
+      </div>
+
+      <div class="field">
+        <label for="tradeTiming">⚔️ トレードしていいタイミング</label>
+        <textarea id="tradeTiming" rows="3" placeholder="例: 相手のWがCDのとき。Lv3でオールインが強い"></textarea>
+      </div>
+
+      <div class="field">
+        <label for="powerSpike">📈 相手のパワースパイク</label>
+        <textarea id="powerSpike" rows="3" placeholder="例: Lv6のR / ボーク完成後は絶対に1v1しない"></textarea>
+      </div>
+
+      <div class="field">
+        <label for="reflection">💭 ひとこと反省</label>
+        <textarea id="reflection" rows="3" placeholder="例: 序盤に欲張りすぎた。次はLv3まで我慢する"></textarea>
+      </div>
+
+      <div class="buttons">
+        <button id="saveButton" class="btn btn-primary">💾 メモを保存</button>
+        <button id="clearButton" class="btn btn-ghost">入力をクリア</button>
+      </div>
+
+      <p id="saveMessage" class="save-message"></p>
+    </section>
+
+    <!-- ===== 3. 保存済み一覧エリア ===== -->
+    <section class="card">
+      <h2>3. 保存済みのマッチアップ</h2>
+      <div id="savedList" class="saved-list"></div>
+    </section>
+
+  </main>
+
+  <footer class="footer">
+    <p>チャンピオンのデータと画像は Riot Games の Data Dragon から取得しています。</p>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
