@@ -3,58 +3,75 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>LoL マッチアップ対策シート</title>
+  <title>マッチアップ対策シート</title>
+
+  <!-- 見出し用の書体（Marcellus）と本文用の書体（Noto Sans JP） -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Marcellus&family=Noto+Sans+JP:wght@400;500;700&display=swap">
+
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
   <!-- =========================================================
-       ヘッダー ＋ 自分のチャンプ設定
-       「自分のチャンプ」は毎回選ぶものではなく“設定”として覚えておく。
+       ヘッダー（スクロールしても上に残る）
        ========================================================= -->
   <header class="header">
-    <h1>マッチアップ対策シート</h1>
+    <div class="header-inner">
+      <div class="brand">
+        <span class="brand-mark"></span>
+        <span class="brand-text">
+          <span class="brand-en">MATCHUP SHEET</span>
+          <span class="brand-ja">マッチアップ対策シート</span>
+        </span>
+      </div>
 
-    <div class="mychamp">
-      <span class="mychamp-label">自分</span>
-      <img id="myIcon" class="mychamp-icon" alt="" hidden>
-      <span id="myName" class="mychamp-name">未設定</span>
-      <button id="changeMyButton" class="btn btn-small">変更</button>
+      <div class="mychamp">
+        <span class="mychamp-label">自分</span>
+        <img id="myIcon" class="mychamp-icon" alt="" hidden>
+        <span id="myName" class="mychamp-name">未設定</span>
+        <button id="changeMyButton" class="btn btn-small">変更</button>
+      </div>
     </div>
   </header>
 
   <main class="container">
 
-    <!-- 自分のチャンプを選ぶパネル（ふだんは閉じている） -->
-    <section id="myPicker" class="card" hidden>
-      <h2>自分のチャンプを選ぶ</h2>
+    <!-- =========================================================
+         自分のチャンプを選ぶ（ふだんは閉じている）
+         ========================================================= -->
+    <section id="myPicker" class="panel" hidden>
+      <h2 class="panel-title">自分のチャンプを選ぶ</h2>
+      <div id="myKana" class="kana"></div>
       <input type="text" id="mySearch" class="search" placeholder="名前で検索（例: ヤスオ / yasuo）">
       <div id="myGrid" class="grid"></div>
     </section>
 
     <!-- =========================================================
          相手のチャンプを探す（このサイトの主役）
-         チャンプセレクトの30秒で使うので、ここに一直線で入れる。
          ========================================================= -->
-    <section class="card">
-      <h2>相手は誰？</h2>
+    <section class="panel panel-accent">
+      <h2 class="panel-title">相手は誰？</h2>
       <p id="loadingMessage" class="loading">チャンピオン一覧を読み込み中…</p>
       <input type="text" id="enemySearch" class="search search-big"
-             placeholder="相手の名前を入力して Enter（例: ダリウス / darius）">
+             placeholder="名前を入力して Enter（例: ダリウス / darius）">
+      <div id="enemyKana" class="kana"></div>
       <div id="enemyGrid" class="grid"></div>
     </section>
 
     <!-- =========================================================
-         対策シート（読む用）
-         相手を選んだ瞬間にここが出る。編集欄ではなく“読む”画面。
+         対策シート（読む画面）
          ========================================================= -->
-    <section id="sheet" class="card sheet" hidden>
+    <section id="sheet" class="panel sheet" hidden>
 
-      <!-- 見出し：アイコン・名前・相性バッジ -->
       <div class="sheet-head">
-        <img id="sheetMyIcon" class="sheet-icon" alt="">
-        <span class="sheet-vs">VS</span>
-        <img id="sheetEnemyIcon" class="sheet-icon sheet-icon-enemy" alt="">
+        <div class="sheet-faces">
+          <img id="sheetMyIcon" class="sheet-icon" alt="">
+          <span class="sheet-vs">VS</span>
+          <img id="sheetEnemyIcon" class="sheet-icon sheet-icon-enemy" alt="">
+        </div>
         <div class="sheet-titles">
           <div id="sheetTitle" class="sheet-title"></div>
           <div id="sheetSubtitle" class="sheet-subtitle"></div>
@@ -62,20 +79,20 @@
         <span id="sheetDifficulty" class="badge" hidden></span>
       </div>
 
-      <!-- 方針：一番大事なので一番大きく出す -->
-      <div id="planBox" class="plan-box" hidden>
-        <div class="plan-label">レーン戦の方針</div>
+      <!-- 方針：一番大事なので一番大きく -->
+      <div id="planBox" class="plan" hidden>
+        <div class="plan-label">LANE PLAN ／ レーン戦の方針</div>
         <div id="planText" class="plan-text"></div>
       </div>
 
       <!-- まだ対策を書いていないとき -->
       <div id="emptySheet" class="empty-sheet" hidden>
-        <p>このマッチアップの対策はまだ書かれていません。</p>
+        <p>このマッチアップの対策はまだありません。</p>
         <button id="createButton" class="btn btn-primary">対策を書く</button>
       </div>
 
-      <!-- 対策の本体（3秒〜15秒で読む部分） -->
-      <div id="sheetBody" class="sheet-body" hidden>
+      <!-- 4つのポイント -->
+      <div id="sheetBody" class="points" hidden>
         <div class="point point-danger">
           <h3>⚠️ 絶対に避ける</h3>
           <p id="viewAvoid"></p>
@@ -89,12 +106,24 @@
           <p id="viewSpike"></p>
         </div>
         <div class="point point-build">
-          <h3>🛡️ ビルド・ルーン対策</h3>
+          <h3>🛡️ 対策メモ</h3>
           <p id="viewBuild"></p>
         </div>
       </div>
 
-      <!-- レーン戦の流れ（時間帯ごと・折りたたみ） -->
+      <!-- ルーンとビルド（自分で選んだもの） -->
+      <div id="setupBox" class="setup" hidden>
+        <div class="setup-col">
+          <div class="setup-label">RUNES ／ ルーン</div>
+          <div id="viewRunes" class="setup-runes"></div>
+        </div>
+        <div class="setup-col">
+          <div class="setup-label">BUILD ／ ビルド</div>
+          <div id="viewItems" class="setup-items"></div>
+        </div>
+      </div>
+
+      <!-- レーン戦の流れ -->
       <details id="phaseBox" class="fold" hidden>
         <summary>🕐 レーン戦の流れ</summary>
         <div class="phases">
@@ -113,19 +142,26 @@
         </div>
       </details>
 
-      <!-- 相手のスキル一覧（Data Dragon から自動で取ってくる） -->
-      <details class="fold">
-        <summary>📖 相手のスキル（自動表示）</summary>
-        <div id="spellList" class="spell-list">
+      <!-- 相手のスキル（説明つき・動画つき／自動表示） -->
+      <details class="fold" open>
+        <summary>📖 相手のスキル<span class="fold-auto">自動</span></summary>
+        <div id="spellList" class="spells">
           <p class="loading">読み込み中…</p>
         </div>
       </details>
 
-      <!-- 前回の気づき（試合のあとに足す用なので控えめに） -->
+      <!-- 気づいたこと -->
       <details id="noteBox" class="fold" hidden>
         <summary>📝 気づいたこと</summary>
         <p id="viewNote" class="fold-text"></p>
       </details>
+
+      <!-- 外部サイトで最新の統計を見る -->
+      <div class="external">
+        <span class="external-label">最新の統計を見る</span>
+        <a id="linkOpgg" class="external-link" target="_blank" rel="noopener noreferrer">op.gg</a>
+        <a id="linkUgg" class="external-link" target="_blank" rel="noopener noreferrer">u.gg</a>
+      </div>
 
       <div class="sheet-actions">
         <button id="editButton" class="btn">✏️ この対策を編集</button>
@@ -134,10 +170,10 @@
     </section>
 
     <!-- =========================================================
-         編集フォーム（ふだんは閉じている）
+         編集フォーム
          ========================================================= -->
-    <section id="editor" class="card" hidden>
-      <h2 id="editorTitle">対策を編集</h2>
+    <section id="editor" class="panel" hidden>
+      <h2 id="editorTitle" class="panel-title">対策を編集</h2>
 
       <div class="field">
         <label>相性</label>
@@ -151,7 +187,7 @@
 
       <div class="field">
         <label for="editPlan">レーン戦の方針（ひとことで）</label>
-        <input type="text" id="editPlan" class="input"
+        <input type="text" id="editPlan" class="search"
                placeholder="例: Lv3まで我慢してファーム。6以降にオールイン">
       </div>
 
@@ -167,27 +203,55 @@
 
       <div class="field">
         <label for="editSpike">⏰ 相手が強くなる瞬間</label>
-        <textarea id="editSpike" rows="3" placeholder="例: Lv6のR。パッシブ5スタック時。ステラックの護符完成後"></textarea>
+        <textarea id="editSpike" rows="3" placeholder="例: Lv6のR。パッシブ5スタック時"></textarea>
       </div>
 
       <div class="field">
-        <label for="editBuild">🛡️ ビルド・ルーン対策</label>
-        <textarea id="editBuild" rows="3" placeholder="例: 序盤からドランシールド＋体力回復。ルーンは打ちこわし"></textarea>
+        <label for="editBuild">🛡️ 対策メモ</label>
+        <textarea id="editBuild" rows="3" placeholder="例: 序盤はドランシールドで受ける。体力回復を切らさない"></textarea>
       </div>
 
+      <!-- ルーンを選ぶ -->
       <fieldset class="fieldset">
-        <legend>🕐 レーン戦の流れ</legend>
+        <legend>ルーン</legend>
+
+        <div class="field">
+          <label>メイン系統とキーストーン</label>
+          <div id="treeTabs" class="trees"></div>
+          <div id="keystoneOptions" class="keystones"></div>
+        </div>
+
+        <div class="field">
+          <label>サブ系統</label>
+          <div id="secondaryOptions" class="trees"></div>
+        </div>
+
+        <p id="runeLoading" class="loading" hidden>ルーン情報を読み込み中…</p>
+      </fieldset>
+
+      <!-- ビルドを選ぶ -->
+      <fieldset class="fieldset">
+        <legend>ビルド（最大6つ・押した順に並ぶ）</legend>
+
+        <div id="pickedItems" class="picked"></div>
+        <input type="text" id="itemSearch" class="search" placeholder="アイテム名で検索（例: 三位一体 / ステラック）">
+        <p id="itemLoading" class="loading" hidden>アイテム情報を読み込み中…</p>
+        <div id="itemGrid" class="grid grid-item"></div>
+      </fieldset>
+
+      <fieldset class="fieldset">
+        <legend>レーン戦の流れ</legend>
         <div class="field">
           <label for="editEarly">Lv1-2</label>
           <textarea id="editEarly" rows="2" placeholder="例: ミニオンだけ叩く。近づかない"></textarea>
         </div>
         <div class="field">
           <label for="editMid">Lv3-5</label>
-          <textarea id="editMid" rows="2" placeholder="例: Eを外させてからトレード。ジャングラーを呼ぶ"></textarea>
+          <textarea id="editMid" rows="2" placeholder="例: Eを外させてからトレード"></textarea>
         </div>
         <div class="field">
           <label for="editLate">Lv6以降</label>
-          <textarea id="editLate" rows="2" placeholder="例: Rがある間は1v1しない。サイドは押しつけてローム"></textarea>
+          <textarea id="editLate" rows="2" placeholder="例: Rがある間は1v1しない"></textarea>
         </div>
       </fieldset>
 
@@ -197,18 +261,18 @@
       </div>
 
       <div class="buttons">
-        <button id="saveButton" class="btn btn-primary">💾 保存</button>
+        <button id="saveButton" class="btn btn-primary">保存</button>
         <button id="cancelButton" class="btn btn-ghost">キャンセル</button>
       </div>
       <p id="saveMessage" class="save-message"></p>
     </section>
 
     <!-- =========================================================
-         対策を書いたマッチアップの一覧
+         対策ずみの一覧
          ========================================================= -->
-    <section class="card">
+    <section class="panel">
       <div class="list-head">
-        <h2>対策ずみのマッチアップ</h2>
+        <h2 class="panel-title">対策ずみのマッチアップ</h2>
         <label class="toggle">
           <input type="checkbox" id="filterMine" checked>
           自分のチャンプだけ
@@ -220,7 +284,7 @@
   </main>
 
   <footer class="footer">
-    <p>チャンピオンのデータと画像は Riot Games の Data Dragon から取得しています。</p>
+    <p>チャンピオン・スキル・ルーン・アイテムのデータと画像、スキル動画は Riot Games のものです。</p>
     <p>Riot Games とは関係のない非公式な個人用ツールです。</p>
   </footer>
 
