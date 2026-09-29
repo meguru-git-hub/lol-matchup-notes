@@ -13,7 +13,6 @@
   <!-- スマホでブラウザの枠の色をページに合わせる -->
   <meta name="theme-color" content="#010a13">
 
-  <!-- 見出し用の書体（Marcellus）と本文用の書体（Noto Sans JP） -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet"
@@ -74,11 +73,16 @@
          ========================================================= -->
     <section id="sheet" class="panel sheet" hidden>
 
-      <div class="sheet-head">
+      <!-- 見出し。背景にうっすら相手のスプラッシュアートを敷く -->
+      <div id="sheetHead" class="sheet-head">
         <div class="sheet-faces">
-          <img id="sheetMyIcon" class="sheet-icon" alt="">
+          <button id="sheetMyFace" class="sheet-face" title="自分のスキルを見る">
+            <img id="sheetMyIcon" class="sheet-icon" alt="">
+          </button>
           <span class="sheet-vs">VS</span>
-          <img id="sheetEnemyIcon" class="sheet-icon sheet-icon-enemy" alt="">
+          <button id="sheetEnemyFace" class="sheet-face" title="相手のスキルを見る">
+            <img id="sheetEnemyIcon" class="sheet-icon sheet-icon-enemy" alt="">
+          </button>
         </div>
         <div class="sheet-titles">
           <div id="sheetTitle" class="sheet-title"></div>
@@ -119,14 +123,20 @@
         </div>
       </div>
 
-      <!-- ルーンとビルド（自分で選んだもの） -->
+      <!-- ルーンとビルド -->
       <div id="setupBox" class="setup" hidden>
         <div class="setup-col">
-          <div class="setup-label">RUNES ／ ルーン</div>
+          <div class="setup-label">
+            RUNES ／ ルーン
+            <span id="runeBasicTag" class="basic-tag" hidden>基本形</span>
+          </div>
           <div id="viewRunes" class="setup-runes"></div>
         </div>
         <div class="setup-col">
-          <div class="setup-label">BUILD ／ ビルド</div>
+          <div class="setup-label">
+            BUILD ／ ビルド
+            <span id="itemBasicTag" class="basic-tag" hidden>基本形</span>
+          </div>
           <div id="viewItems" class="setup-items"></div>
         </div>
       </div>
@@ -150,9 +160,18 @@
         </div>
       </details>
 
-      <!-- 相手のスキル（説明つき・動画つき／自動表示） -->
+      <!-- スキル（相手／自分をタブで切り替え・自動表示） -->
       <details class="fold" open>
-        <summary>📖 相手のスキル<span class="fold-auto">自動</span></summary>
+        <summary>📖 スキル<span class="fold-auto">自動</span></summary>
+
+        <div class="skill-tabs">
+          <button id="tabEnemy" class="skill-tab is-on">相手</button>
+          <button id="tabMy" class="skill-tab">自分</button>
+        </div>
+
+        <!-- 表示中のチャンピオンの特徴（攻撃力・防御力など） -->
+        <div id="champInfo" class="champ-info"></div>
+
         <div id="spellList" class="spells">
           <p class="loading">読み込み中…</p>
         </div>
@@ -219,9 +238,16 @@
         <textarea id="editBuild" rows="3" placeholder="例: 序盤はドランシールドで受ける。体力回復を切らさない"></textarea>
       </div>
 
-      <!-- ルーンを選ぶ -->
+      <!-- ルーンとビルド -->
       <fieldset class="fieldset">
-        <legend>ルーン</legend>
+        <legend>ルーンとビルド</legend>
+
+        <!-- チャンピオンごとの「基本形」を出し入れする -->
+        <div class="basic-actions">
+          <button type="button" id="loadBasicButton" class="btn btn-small">基本形を読みこむ</button>
+          <button type="button" id="saveBasicButton" class="btn btn-small">いまの内容を基本形にする</button>
+          <span id="basicStatus" class="basic-status"></span>
+        </div>
 
         <div class="field">
           <label>メイン系統とキーストーン</label>
@@ -235,16 +261,14 @@
         </div>
 
         <p id="runeLoading" class="loading" hidden>ルーン情報を読み込み中…</p>
-      </fieldset>
 
-      <!-- ビルドを選ぶ -->
-      <fieldset class="fieldset">
-        <legend>ビルド（最大6つ・押した順に並ぶ）</legend>
-
-        <div id="pickedItems" class="picked"></div>
-        <input type="text" id="itemSearch" class="search" placeholder="アイテム名で検索（例: 三位一体 / ステラック）">
-        <p id="itemLoading" class="loading" hidden>アイテム情報を読み込み中…</p>
-        <div id="itemGrid" class="grid grid-item"></div>
+        <div class="field">
+          <label>ビルド（最大6つ・押した順に並ぶ）</label>
+          <div id="pickedItems" class="picked"></div>
+          <input type="text" id="itemSearch" class="search" placeholder="アイテム名で検索（例: 三位一体 / ステラック）">
+          <p id="itemLoading" class="loading" hidden>アイテム情報を読み込み中…</p>
+          <div id="itemGrid" class="grid grid-item"></div>
+        </div>
       </fieldset>
 
       <fieldset class="fieldset">

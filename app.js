@@ -10,8 +10,8 @@
      2) 五十音（あ行〜わ行）でチャンピオンを絞りこむ
      3) 自分のチャンプを「設定」として覚えておく
      4) 相手を選んだら対策シートを表示する
-     5) 相手のスキルを「説明つき・動画つき」で自動表示する
-     6) ルーンとビルドを選んで保存する
+     5) スキルを「説明つき・動画つき」で表示（相手／自分を切り替えられる）
+     6) ルーンとビルドを選んで保存する（チャンピオンごとの「基本形」も持てる）
      7) 全部 localStorage に保存する
    ========================================================= */
 
@@ -20,10 +20,12 @@
    設定
    --------------------------------------------------------- */
 
-const STORAGE_KEY   = "lolMatchupNotes";   // 対策の保存場所
-const MY_CHAMP_KEY  = "lolMyChampion";     // 自分のチャンプの保存場所
+const STORAGE_KEY  = "lolMatchupNotes";    // 対策の保存場所
+const MY_CHAMP_KEY = "lolMyChampion";      // 自分のチャンプの保存場所
+const BASICS_KEY   = "lolChampionBasics";  // チャンピオンごとの基本ルーン/ビルド
 
 const DDRAGON = "https://ddragon.leagueoflegends.com/cdn/";
+const DDRAGON_IMG = "https://ddragon.leagueoflegends.com/cdn/img/";
 const VERSIONS_URL = "https://ddragon.leagueoflegends.com/api/versions.json";
 
 // スキル動画の置き場所（Riot の CDN）
@@ -31,6 +33,33 @@ const VIDEO_BASE = "https://d28xe8vt774jo5.cloudfront.net/champion-abilities/";
 
 const DIFFICULTY_LABELS = {
   easy: "有利", even: "互角", hard: "不利", veryhard: "超不利"
+};
+
+// チャンピオンの分類を日本語にする
+const TAG_LABELS = {
+  Fighter: "ファイター", Tank: "タンク", Mage: "メイジ",
+  Assassin: "アサシン", Marksman: "マークスマン", Support: "サポート"
+};
+
+/* スキルの説明文に入っているタグを、どの色で出すか。
+   Riot のデータには <magicDamage>魔法ダメージ</magicDamage> のような
+   目印が埋めこまれている。ゲーム本編ではこれが色分けされているので、
+   同じように色をつけて読みやすくする。 */
+const KEYWORD_CLASS = {
+  magicdamage:    "kw-magic",
+  physicaldamage: "kw-physical",
+  truedamage:     "kw-true",
+  healing:        "kw-heal",
+  shield:         "kw-shield",
+  speed:          "kw-speed",
+  status:         "kw-status",
+  onhit:          "kw-onhit",
+  keywordmajor:   "kw-major",
+  keywordname:    "kw-major",
+  spellname:      "kw-spell",
+  passive:        "kw-label",
+  active:         "kw-label",
+  maintext:       ""          // ただの囲みなので色はつけない
 };
 
 /* 五十音の行わけ。
@@ -60,20 +89,21 @@ let latestVersion = "";
 let selectedMy = null;
 let selectedEnemy = null;
 
-// 五十音フィルターでいま選んでいる行（"" なら全部）
-let myRow = "";
+let myRow = "";      // 五十音フィルターでいま選んでいる行（"" なら全部）
 let enemyRow = "";
+
+let skillTab = "enemy";   // スキル欄で「相手」と「自分」のどちらを見ているか
 
 // 一度取ったデータは覚えておいて、二度目からは使いまわす
 const spellCache = {};
-let runeTrees = null;   // ルーン系統（あとから取ってくる）
-let itemList = null;    // アイテム一覧（あとから取ってくる）
+let runeTrees = null;
+let itemList = null;
 
 // 編集中の状態
 let editingDifficulty = "";
 let editingRunes = { treeId: null, keystoneId: null, secondaryId: null };
-let editingItems = [];      // [{ id, name }]
-let editingTreeTab = null;  // 編集画面でいま開いている系統タブ
+let editingItems = [];
+let editingTreeTab = null;
 
 
 /* ---------------------------------------------------------
@@ -95,6 +125,9 @@ const el = {
   enemyGrid:   document.getElementById("enemyGrid"),
 
   sheet:           document.getElementById("sheet"),
+  sheetHead:       document.getElementById("sheetHead"),
+  sheetMyFace:     document.getElementById("sheetMyFace"),
+  sheetEnemyFace:  document.getElementById("sheetEnemyFace"),
   sheetMyIcon:     document.getElementById("sheetMyIcon"),
   sheetEnemyIcon:  document.getElementById("sheetEnemyIcon"),
   sheetTitle:      document.getElementById("sheetTitle"),
@@ -112,10 +145,15 @@ const el = {
   setupBox:        document.getElementById("setupBox"),
   viewRunes:       document.getElementById("viewRunes"),
   viewItems:       document.getElementById("viewItems"),
+  runeBasicTag:    document.getElementById("runeBasicTag"),
+  itemBasicTag:    document.getElementById("itemBasicTag"),
   phaseBox:        document.getElementById("phaseBox"),
   viewEarly:       document.getElementById("viewEarly"),
   viewMid:         document.getElementById("viewMid"),
   viewLate:        document.getElementById("viewLate"),
+  tabEnemy:        document.getElementById("tabEnemy"),
+  tabMy:           document.getElementById("tabMy"),
+  champInfo:       document.getElementById("champInfo"),
   spellList:       document.getElementById("spellList"),
   noteBox:         document.getElementById("noteBox"),
   viewNote:        document.getElementById("viewNote"),
@@ -132,6 +170,9 @@ const el = {
   editTrade:         document.getElementById("editTrade"),
   editSpike:         document.getElementById("editSpike"),
   editBuild:         document.getElementById("editBuild"),
+  loadBasicButton:   document.getElementById("loadBasicButton"),
+  saveBasicButton:   document.getElementById("saveBasicButton"),
+  basicStatus:       document.getElementById("basicStatus"),
   treeTabs:          document.getElementById("treeTabs"),
   keystoneOptions:   document.getElementById("keystoneOptions"),
   secondaryOptions:  document.getElementById("secondaryOptions"),
@@ -172,10 +213,10 @@ async function loadChampions() {
         key:   champ.key,      // 数字のID。スキル動画のURLに使う
         name:  champ.name,
         title: champ.title,
-        row:   kanaRowOf(champ.name),   // あ行〜わ行のどれか
-        // 検索用の文字列。日本語名と英語名を区切り文字なしでつなげておく
+        row:   kanaRowOf(champ.name),
         search: normalize(champ.name) + " " + normalize(champ.id),
-        icon:  DDRAGON + latestVersion + "/img/champion/" + champ.id + ".png"
+        icon:  DDRAGON + latestVersion + "/img/champion/" + champ.id + ".png",
+        splash: DDRAGON_IMG + "champion/splash/" + champ.id + "_0.jpg"
       };
     });
 
@@ -226,11 +267,8 @@ function renderKanaTabs(which) {
   const box = (which === "my") ? el.myKana : el.enemyKana;
   box.innerHTML = "";
 
-  // 「全部」＋ あ行〜わ行
   const tabs = [{ key: "", label: "全" }].concat(
-    KANA_ROWS.map(function (row) {
-      return { key: row.key, label: row.key };
-    })
+    KANA_ROWS.map(function (row) { return { key: row.key, label: row.key }; })
   );
 
   tabs.forEach(function (tab) {
@@ -239,7 +277,6 @@ function renderKanaTabs(which) {
     button.textContent = tab.label;
     button.dataset.row = tab.key;
 
-    // その行にチャンピオンがいなければ押せなくする
     if (tab.key !== "" && !champions.some(function (c) { return c.row === tab.key; })) {
       button.disabled = true;
     }
@@ -260,7 +297,6 @@ function renderKanaTabs(which) {
     box.appendChild(button);
   });
 
-  // いま選んでいる行に印をつける
   const current = (which === "my") ? myRow : enemyRow;
   const active = box.querySelector('.kana-tab[data-row="' + current + '"]');
   if (active) active.classList.add("is-on");
@@ -274,10 +310,8 @@ function renderKanaTabs(which) {
 function restoreMyChampion() {
   try {
     const saved = localStorage.getItem(MY_CHAMP_KEY);
-    if (!saved) {
-      el.myPicker.hidden = false;
-      return;
-    }
+    if (!saved) { el.myPicker.hidden = false; return; }
+
     const champ = champions.find(function (c) { return c.id === JSON.parse(saved); });
     if (champ) {
       setMyChampion(champ, false);
@@ -325,9 +359,7 @@ function renderGrid(which) {
   const keyword = normalize(searchBox.value);
 
   const list = champions.filter(function (champ) {
-    // 五十音の行でしぼる
     if (row !== "" && champ.row !== row) return false;
-    // 検索文字でしぼる（日本語名でも英語名でも探せる）
     if (keyword === "") return true;
     return champ.search.includes(keyword);
   });
@@ -406,6 +438,7 @@ function selectEnemy(champ) {
   }
 
   el.editor.hidden = true;
+  skillTab = "enemy";        // 相手を選び直したら、スキル欄は相手に戻す
   showSheet();
   el.sheet.scrollIntoView({ behavior: "smooth", block: "start" });
 }
@@ -428,6 +461,14 @@ function showSheet() {
   el.sheetTitle.textContent = selectedMy.name + " vs " + selectedEnemy.name;
   el.sheetSubtitle.textContent = selectedEnemy.title || "";
 
+  el.sheetMyFace.title = selectedMy.name + " のスキルを見る";
+  el.sheetEnemyFace.title = selectedEnemy.name + " のスキルを見る";
+
+  // 見出しの背景に、相手のスプラッシュアートをうっすら敷く
+  el.sheetHead.style.backgroundImage =
+    "linear-gradient(90deg, rgba(10,22,38,0.97) 28%, rgba(10,22,38,0.55) 100%), " +
+    "url('" + selectedEnemy.splash + "')";
+
   // 相性バッジ
   const difficulty = note ? (note.difficulty || "") : "";
   if (difficulty) {
@@ -438,24 +479,25 @@ function showSheet() {
     el.sheetDifficulty.hidden = true;
   }
 
-  // 外部サイトへのリンク（相手のチャンピオンのページ）
+  // 外部サイトへのリンク
   const slug = selectedEnemy.id.toLowerCase();
   el.linkOpgg.href = "https://op.gg/lol/champions/" + slug + "/build";
   el.linkUgg.href  = "https://u.gg/lol/champions/" + slug + "/build";
 
-  // 相手のスキル（対策が無くても見られるように先に出す）
-  showSpells(selectedEnemy);
+  // スキル欄（対策が無くても見られるように先に出す）
+  renderSkillTabs();
+  showSpells(skillChampion());
 
   // 対策がまだ無いとき
   if (!note) {
     el.emptySheet.hidden = false;
     el.planBox.hidden = true;
     el.sheetBody.hidden = true;
-    el.setupBox.hidden = true;
     el.phaseBox.hidden = true;
     el.noteBox.hidden = true;
     el.editButton.hidden = true;
     el.sheetUpdated.textContent = "";
+    showSetup(null);          // 対策が無くても「基本形」があれば出す
     return;
   }
 
@@ -464,10 +506,10 @@ function showSheet() {
 
   showOrHide(el.planBox, el.planText, note.plan);
 
-  // 4つのポイント。
-  // ここで配列を使うのには理由がある。A() || B() と書くと A() が true の時点で
-  // B() が実行されず、前に見ていた相手の文章が消えずに残ってしまう（短絡評価）。
-  // 配列なら必ず全部が実行されるので、確実に書き換わる。
+  /* 4つのポイント。
+     ここで配列を使うのには理由がある。A() || B() と書くと A() が true の時点で
+     B() が実行されず、前に見ていた相手の文章が消えずに残ってしまう（短絡評価）。
+     配列なら必ず全部が実行されるので、確実に書き換わる。 */
   const pointsFilled = [
     fillPoint(el.viewAvoid, note.avoidSkill),
     fillPoint(el.viewTrade, note.tradeTiming),
@@ -476,7 +518,6 @@ function showSheet() {
   ];
   el.sheetBody.hidden = !pointsFilled.includes(true);
 
-  // ルーンとビルド
   showSetup(note);
 
   const phasesFilled = [
@@ -514,59 +555,73 @@ function fillPoint(element, value) {
 
 /* =========================================================
    7) ルーンとビルドの表示
-   保存するときに名前とアイコンも一緒に入れてあるので、
-   表示するだけならルーン/アイテムのデータを取りに行かなくて済む。
+   このマッチアップ専用のものが無ければ、
+   チャンピオンの「基本形」を（基本形だと分かる印つきで）出す。
    ========================================================= */
 
 function showSetup(note) {
-  const runes = note.runes;
-  const items = note.items || [];
+  const basic = getBasic(selectedMy.id);
+
+  // ルーン：マッチアップ専用 → 無ければ基本形
+  let runes = note && note.runes ? note.runes : null;
+  let runesAreBasic = false;
+  if (!runes && basic && basic.runes) { runes = basic.runes; runesAreBasic = true; }
+
+  // ビルド：同じ考えかた
+  let items = note && note.items && note.items.length > 0 ? note.items : null;
+  let itemsAreBasic = false;
+  if (!items && basic && basic.items && basic.items.length > 0) {
+    items = basic.items; itemsAreBasic = true;
+  }
 
   el.viewRunes.innerHTML = "";
   el.viewItems.innerHTML = "";
+  el.runeBasicTag.hidden = !runesAreBasic;
+  el.itemBasicTag.hidden = !itemsAreBasic;
 
   // --- ルーン ---
   if (runes && runes.keystoneIcon) {
-    const keystone = document.createElement("div");
-    keystone.className = "rune-main";
+    const box = document.createElement("div");
+    box.className = "rune-main";
 
     const kImg = document.createElement("img");
     kImg.className = "rune-keystone";
-    kImg.src = "https://ddragon.leagueoflegends.com/cdn/img/" + runes.keystoneIcon;
+    kImg.src = DDRAGON_IMG + runes.keystoneIcon;
     kImg.alt = runes.keystoneName;
     kImg.title = runes.keystoneName;
 
-    const kText = document.createElement("div");
-    kText.className = "rune-text";
-    const kName = document.createElement("div");
-    kName.className = "rune-name";
-    kName.textContent = runes.keystoneName;
-    const kTree = document.createElement("div");
-    kTree.className = "rune-tree";
-    kTree.textContent = runes.treeName + (runes.secondaryName ? " + " + runes.secondaryName : "");
-    kText.appendChild(kName);
-    kText.appendChild(kTree);
+    const text = document.createElement("div");
+    text.className = "rune-text";
 
-    keystone.appendChild(kImg);
-    keystone.appendChild(kText);
+    const name = document.createElement("div");
+    name.className = "rune-name";
+    name.textContent = runes.keystoneName;
 
-    // サブ系統のアイコン
+    const tree = document.createElement("div");
+    tree.className = "rune-tree";
+    tree.textContent = runes.treeName + (runes.secondaryName ? " + " + runes.secondaryName : "");
+
+    text.appendChild(name);
+    text.appendChild(tree);
+    box.appendChild(kImg);
+    box.appendChild(text);
+
     if (runes.secondaryIcon) {
       const sImg = document.createElement("img");
       sImg.className = "rune-secondary";
-      sImg.src = "https://ddragon.leagueoflegends.com/cdn/img/" + runes.secondaryIcon;
+      sImg.src = DDRAGON_IMG + runes.secondaryIcon;
       sImg.alt = runes.secondaryName;
       sImg.title = "サブ: " + runes.secondaryName;
-      keystone.appendChild(sImg);
+      box.appendChild(sImg);
     }
 
-    el.viewRunes.appendChild(keystone);
+    el.viewRunes.appendChild(box);
   } else {
     el.viewRunes.appendChild(blankText("未設定"));
   }
 
   // --- ビルド ---
-  if (items.length > 0) {
+  if (items) {
     items.forEach(function (item) {
       const img = document.createElement("img");
       img.className = "item-icon";
@@ -580,9 +635,8 @@ function showSetup(note) {
     el.viewItems.appendChild(blankText("未設定"));
   }
 
-  // ルーンもビルドも空なら枠ごと隠す
   const hasRunes = !!(runes && runes.keystoneIcon);
-  el.setupBox.hidden = !(hasRunes || items.length > 0);
+  el.setupBox.hidden = !(hasRunes || items);
 }
 
 function blankText(text) {
@@ -594,11 +648,72 @@ function blankText(text) {
 
 
 /* =========================================================
-   8) 相手のスキルを表示する（説明つき・動画つき）
+   8) チャンピオンごとの「基本形」
+   毎回ゼロから選ばなくていいように、
+   よく使うルーンとビルドをチャンピオン単位で覚えておく。
+   ========================================================= */
+
+function loadBasics() {
+  try {
+    const text = localStorage.getItem(BASICS_KEY);
+    return text ? JSON.parse(text) : {};
+  } catch (error) {
+    console.error("基本形の読み込みに失敗しました", error);
+    return {};
+  }
+}
+
+function getBasic(champId) {
+  return loadBasics()[champId] || null;
+}
+
+function saveBasic(champId, data) {
+  const all = loadBasics();
+  all[champId] = data;
+  localStorage.setItem(BASICS_KEY, JSON.stringify(all));
+}
+
+
+/* =========================================================
+   9) スキル欄のタブ（相手／自分）
+   ========================================================= */
+
+// いまスキル欄に出すべきチャンピオン
+function skillChampion() {
+  return (skillTab === "my") ? selectedMy : selectedEnemy;
+}
+
+function renderSkillTabs() {
+  el.tabEnemy.textContent = "相手（" + selectedEnemy.name + "）";
+  el.tabMy.textContent    = "自分（" + selectedMy.name + "）";
+  el.tabEnemy.classList.toggle("is-on", skillTab === "enemy");
+  el.tabMy.classList.toggle("is-on", skillTab === "my");
+}
+
+function switchSkillTab(which) {
+  if (!selectedMy || !selectedEnemy) return;
+  skillTab = which;
+  renderSkillTabs();
+  showSpells(skillChampion());
+}
+
+el.tabEnemy.addEventListener("click", function () { switchSkillTab("enemy"); });
+el.tabMy.addEventListener("click",    function () { switchSkillTab("my"); });
+
+// 見出しのアイコンを押しても切り替わる
+el.sheetEnemyFace.addEventListener("click", function () { switchSkillTab("enemy"); });
+el.sheetMyFace.addEventListener("click",    function () { switchSkillTab("my"); });
+
+
+/* =========================================================
+   10) スキルを表示する（説明つき・動画つき）
    ========================================================= */
 
 async function showSpells(champ) {
+  if (!champ) return;
+
   el.spellList.innerHTML = '<p class="loading">読み込み中…</p>';
+  el.champInfo.innerHTML = "";
 
   try {
     let data = spellCache[champ.id];
@@ -611,15 +726,16 @@ async function showSpells(champ) {
       spellCache[champ.id] = data;
     }
 
-    // 待っている間に別の相手へ変えられていたら、この結果は捨てる
-    if (!selectedEnemy || selectedEnemy.id !== champ.id) return;
+    // 待っている間にタブや相手を変えられていたら、この結果は捨てる
+    const wanted = skillChampion();
+    if (!wanted || wanted.id !== champ.id) return;
 
+    renderChampInfo(data);
     el.spellList.innerHTML = "";
 
     // 動画URLに使う4桁の番号（例: 122 → "0122"）
     const key4 = String(champ.key).padStart(4, "0");
 
-    // パッシブ
     el.spellList.appendChild(createSpellRow({
       keyLabel: "P",
       name: data.passive.name,
@@ -629,7 +745,6 @@ async function showSpells(champ) {
       videoUrl: VIDEO_BASE + key4 + "/ability_" + key4 + "_P1.webm"
     }));
 
-    // Q W E R
     const keys = ["Q", "W", "E", "R"];
     data.spells.forEach(function (spell, index) {
       el.spellList.appendChild(createSpellRow({
@@ -648,12 +763,58 @@ async function showSpells(champ) {
   }
 }
 
+// チャンピオンの特徴（分類と能力の目安）を出す
+function renderChampInfo(data) {
+  el.champInfo.innerHTML = "";
+
+  const tags = document.createElement("div");
+  tags.className = "champ-tags";
+  (data.tags || []).forEach(function (tag) {
+    const span = document.createElement("span");
+    span.className = "champ-tag";
+    span.textContent = TAG_LABELS[tag] || tag;
+    tags.appendChild(span);
+  });
+
+  const bars = document.createElement("div");
+  bars.className = "champ-bars";
+  const info = data.info || {};
+  [["攻撃", info.attack], ["防御", info.defense], ["魔法", info.magic], ["難度", info.difficulty]]
+    .forEach(function (pair) {
+      bars.appendChild(createBar(pair[0], pair[1] || 0));
+    });
+
+  el.champInfo.appendChild(tags);
+  el.champInfo.appendChild(bars);
+}
+
+// 「攻撃 ▮▮▮▮▮▮▮▮▯▯」のような目盛りを作る（0〜10）
+function createBar(label, value) {
+  const box = document.createElement("div");
+  box.className = "champ-bar";
+
+  const name = document.createElement("span");
+  name.className = "champ-bar-label";
+  name.textContent = label;
+
+  const track = document.createElement("span");
+  track.className = "champ-bar-track";
+
+  const fill = document.createElement("span");
+  fill.className = "champ-bar-fill";
+  fill.style.width = Math.max(0, Math.min(10, value)) * 10 + "%";
+
+  track.appendChild(fill);
+  box.appendChild(name);
+  box.appendChild(track);
+  return box;
+}
+
 // スキル1つ分の表示を作る
 function createSpellRow(spell) {
   const row = document.createElement("div");
   row.className = "spell";
 
-  // 上の行：キー・アイコン・名前・CD・動画ボタン
   const head = document.createElement("div");
   head.className = "spell-head";
 
@@ -686,17 +847,15 @@ function createSpellRow(spell) {
   head.appendChild(cdEl);
   head.appendChild(videoButton);
 
-  // 下の行：効果の説明
+  // 効果の説明（Riot のタグを色分けして表示する）
   const desc = document.createElement("p");
   desc.className = "spell-desc";
-  desc.textContent = spell.description;
+  renderDescription(desc, spell.description);
 
-  // 動画を入れる場所（最初は空）
   const videoBox = document.createElement("div");
   videoBox.className = "spell-video";
 
   videoButton.addEventListener("click", function () {
-    // すでに開いていたら閉じる
     if (videoBox.firstChild) {
       videoBox.innerHTML = "";
       videoButton.textContent = "▶ 動画";
@@ -712,7 +871,6 @@ function createSpellRow(spell) {
     video.playsInline = true;
     video.preload = "auto";
 
-    // 動画が無いチャンピオン/スキルもありうるので、その時は文字で知らせる
     video.addEventListener("error", function () {
       videoBox.innerHTML = '<p class="loading">この動画は見つかりませんでした。</p>';
     });
@@ -729,11 +887,78 @@ function createSpellRow(spell) {
 
 
 /* =========================================================
-   9) ルーンのデータを取ってくる（編集画面を開いたときだけ）
+   11) スキル説明文の組み立て
+   ---------------------------------------------------------
+   Riot の説明文には、こういうタグが埋めこまれている。
+
+     追加<magicDamage>魔法ダメージ</magicDamage>を与える。<br>次に…
+     <font color='#9b0f5f'>「呪い」</font>をかける。
+
+   そのまま文字として出すと「</font>」のような記号が見えてしまうので、
+   ・<br> は改行にする
+   ・そのほかのタグは消して、中の文字に色をつける
+   という処理をする。173体のうち85体でこのタグが使われている。
+   ========================================================= */
+
+function renderDescription(target, raw) {
+  target.textContent = "";
+  if (!raw) return;
+
+  // <br> と <br /> を改行に置きかえる（CSS の white-space: pre-wrap で改行として出る）
+  const text = String(raw).replace(/<br\s*\/?>/gi, "\n");
+
+  // 「タグ」と「ふつうの文字」に切り分ける。
+  // split の正規表現を括弧でくくると、区切りに使ったタグも配列に残る。
+  const parts = text.split(/(<\/?[a-zA-Z][^>]*>)/);
+
+  // いま何のタグの中にいるかを覚えておく入れもの
+  const openTags = [];
+
+  parts.forEach(function (part) {
+    if (!part) return;
+
+    // 閉じタグ（</font> など）なら、ひとつ戻る
+    if (/^<\/\s*[a-zA-Z]/.test(part)) {
+      openTags.pop();
+      return;
+    }
+
+    // 開きタグ（<font color='...'> など）なら、名前を覚える
+    const opening = part.match(/^<\s*([a-zA-Z][^>\s\/]*)/);
+    if (opening) {
+      openTags.push(opening[1].toLowerCase());
+      return;
+    }
+
+    // ここはふつうの文字。いちばん内側のタグに応じて色をつける
+    const tag = openTags[openTags.length - 1];
+    const className = classForTag(tag);
+
+    if (className) {
+      const span = document.createElement("span");
+      span.className = className;
+      span.textContent = part;
+      target.appendChild(span);
+    } else {
+      target.appendChild(document.createTextNode(part));
+    }
+  });
+}
+
+// タグの名前から、使うCSSクラスを決める
+function classForTag(tag) {
+  if (!tag) return "";                                  // タグの外側 → ふつうの文字
+  if (KEYWORD_CLASS[tag] !== undefined) return KEYWORD_CLASS[tag];
+  return "kw-em";   // 知らないタグ（font や factionIonia など）は共通の強調にする
+}
+
+
+/* =========================================================
+   12) ルーンのデータを取ってくる（編集画面を開いたときだけ）
    ========================================================= */
 
 async function loadRunes() {
-  if (runeTrees) return runeTrees;   // すでに持っていれば使いまわす
+  if (runeTrees) return runeTrees;
 
   el.runeLoading.hidden = false;
   try {
@@ -749,7 +974,6 @@ async function loadRunes() {
   return runeTrees;
 }
 
-// メイン系統のタブを並べる
 function renderTreeTabs() {
   el.treeTabs.innerHTML = "";
   if (!runeTrees) return;
@@ -763,7 +987,6 @@ function renderTreeTabs() {
   });
 }
 
-// いま開いている系統のキーストーンを並べる
 function renderKeystones() {
   el.keystoneOptions.innerHTML = "";
   if (!runeTrees) return;
@@ -778,7 +1001,7 @@ function renderKeystones() {
     if (editingRunes.keystoneId === rune.id) button.classList.add("is-on");
 
     const img = document.createElement("img");
-    img.src = "https://ddragon.leagueoflegends.com/cdn/img/" + rune.icon;
+    img.src = DDRAGON_IMG + rune.icon;
     img.alt = rune.name;
     img.loading = "lazy";
 
@@ -789,14 +1012,12 @@ function renderKeystones() {
     button.appendChild(label);
 
     button.addEventListener("click", function () {
-      // 同じものを押したら解除
       if (editingRunes.keystoneId === rune.id) {
         editingRunes.keystoneId = null;
         editingRunes.treeId = null;
       } else {
         editingRunes.keystoneId = rune.id;
         editingRunes.treeId = tree.id;
-        // メインに選んだ系統がサブにも入っていたらサブを外す
         if (editingRunes.secondaryId === tree.id) editingRunes.secondaryId = null;
       }
       renderKeystones();
@@ -807,7 +1028,6 @@ function renderKeystones() {
   });
 }
 
-// サブ系統を並べる（メインに選んだ系統は選べない）
 function renderSecondary() {
   el.secondaryOptions.innerHTML = "";
   if (!runeTrees) return;
@@ -824,7 +1044,6 @@ function renderSecondary() {
   });
 }
 
-// 系統1つ分のボタンを作る（メインのタブとサブの選択で共用）
 function createTreeButton(tree, isOn, onClick) {
   const button = document.createElement("button");
   button.type = "button";
@@ -832,7 +1051,7 @@ function createTreeButton(tree, isOn, onClick) {
   if (isOn) button.classList.add("is-on");
 
   const img = document.createElement("img");
-  img.src = "https://ddragon.leagueoflegends.com/cdn/img/" + tree.icon;
+  img.src = DDRAGON_IMG + tree.icon;
   img.alt = tree.name;
   img.loading = "lazy";
 
@@ -847,7 +1066,7 @@ function createTreeButton(tree, isOn, onClick) {
 
 
 /* =========================================================
-   10) アイテムのデータを取ってくる（編集画面を開いたときだけ）
+   13) アイテムのデータを取ってくる（編集画面を開いたときだけ）
    ========================================================= */
 
 async function loadItems() {
@@ -863,12 +1082,12 @@ async function loadItems() {
     itemList = Object.entries(json.data)
       .filter(function (entry) {
         const item = entry[1];
-        return item.gold && item.gold.purchasable &&   // 買えるもの
-               item.gold.total >= 400 &&               // 安すぎる部品は除く
-               item.inStore !== false &&               // ショップに並ぶもの
-               !item.consumed &&                       // ポーションなど消耗品は除く
-               !item.requiredAlly &&                   // オーンの強化版は除く
-               item.maps && item.maps["11"];           // サモナーズリフト用
+        return item.gold && item.gold.purchasable &&
+               item.gold.total >= 400 &&
+               item.inStore !== false &&
+               !item.consumed &&
+               !item.requiredAlly &&
+               item.maps && item.maps["11"];
       })
       .map(function (entry) {
         return {
@@ -889,7 +1108,6 @@ async function loadItems() {
   return itemList;
 }
 
-// 検索にあてはまるアイテムを並べる
 function renderItemGrid() {
   el.itemGrid.innerHTML = "";
   if (!itemList) return;
@@ -901,9 +1119,7 @@ function renderItemGrid() {
   if (keyword === "") {
     list = itemList.slice().sort(function (a, b) { return b.gold - a.gold; }).slice(0, 60);
   } else {
-    list = itemList.filter(function (item) {
-      return item.search.includes(keyword);
-    });
+    list = itemList.filter(function (item) { return item.search.includes(keyword); });
   }
 
   if (list.length === 0) {
@@ -923,15 +1139,12 @@ function renderItemGrid() {
     img.loading = "lazy";
     button.appendChild(img);
 
-    button.addEventListener("click", function () {
-      addItem(item);
-    });
+    button.addEventListener("click", function () { addItem(item); });
 
     el.itemGrid.appendChild(button);
   });
 }
 
-// ビルドにアイテムを足す（最大6つ）
 function addItem(item) {
   if (editingItems.length >= 6) {
     el.saveMessage.textContent = "ビルドは6つまでです。";
@@ -941,7 +1154,6 @@ function addItem(item) {
   renderPickedItems();
 }
 
-// 選んだアイテムを並べる（押すと外せる）
 function renderPickedItems() {
   el.pickedItems.innerHTML = "";
 
@@ -979,7 +1191,7 @@ el.itemSearch.addEventListener("input", renderItemGrid);
 
 
 /* =========================================================
-   11) 編集フォーム
+   14) 編集フォーム
    ========================================================= */
 
 async function openEditor() {
@@ -1000,19 +1212,24 @@ async function openEditor() {
 
   setDifficulty(note.difficulty || "");
 
-  // ルーンとビルドの編集状態を用意する
-  editingRunes = {
-    treeId:      note.runes ? (note.runes.treeId      || null) : null,
-    keystoneId:  note.runes ? (note.runes.keystoneId  || null) : null,
-    secondaryId: note.runes ? (note.runes.secondaryId || null) : null
-  };
-  // 保存されている系統のタブを開いておく（無ければ最初の系統）
-  editingTreeTab = editingRunes.treeId;
+  // ルーンとビルド。
+  // このマッチアップにまだ何も入っていなければ、基本形を下書きとして入れておく。
+  const basic = getBasic(selectedMy.id);
+  const hasOwnSetup = !!note.runes || (note.items && note.items.length > 0);
+  const source = hasOwnSetup ? note : (basic || {});
 
-  editingItems = (note.items || []).map(function (item) {
+  editingRunes = {
+    treeId:      source.runes ? (source.runes.treeId      || null) : null,
+    keystoneId:  source.runes ? (source.runes.keystoneId  || null) : null,
+    secondaryId: source.runes ? (source.runes.secondaryId || null) : null
+  };
+  editingItems = (source.items || []).map(function (item) {
     return { id: item.id, name: item.name };
   });
+  editingTreeTab = editingRunes.treeId;
+
   renderPickedItems();
+  updateBasicStatus(!hasOwnSetup && !!basic);
 
   el.saveMessage.textContent = "";
   el.editor.hidden = false;
@@ -1031,6 +1248,53 @@ async function openEditor() {
   await loadItems();
   renderItemGrid();
 }
+
+// 基本形まわりの案内文を出す
+function updateBasicStatus(loadedFromBasic) {
+  const basic = getBasic(selectedMy.id);
+  if (loadedFromBasic) {
+    el.basicStatus.textContent = selectedMy.name + " の基本形を読みこみました";
+  } else if (basic) {
+    el.basicStatus.textContent = selectedMy.name + " の基本形が保存されています";
+  } else {
+    el.basicStatus.textContent = selectedMy.name + " の基本形はまだありません";
+  }
+}
+
+el.loadBasicButton.addEventListener("click", function () {
+  const basic = getBasic(selectedMy.id);
+  if (!basic) {
+    el.basicStatus.textContent = selectedMy.name + " の基本形はまだありません";
+    return;
+  }
+
+  editingRunes = {
+    treeId:      basic.runes ? (basic.runes.treeId      || null) : null,
+    keystoneId:  basic.runes ? (basic.runes.keystoneId  || null) : null,
+    secondaryId: basic.runes ? (basic.runes.secondaryId || null) : null
+  };
+  editingItems = (basic.items || []).map(function (item) {
+    return { id: item.id, name: item.name };
+  });
+  editingTreeTab = editingRunes.treeId !== null
+    ? editingRunes.treeId
+    : (runeTrees ? runeTrees[0].id : null);
+
+  renderTreeTabs();
+  renderKeystones();
+  renderSecondary();
+  renderPickedItems();
+  el.basicStatus.textContent = selectedMy.name + " の基本形を読みこみました";
+});
+
+el.saveBasicButton.addEventListener("click", function () {
+  saveBasic(selectedMy.id, {
+    runes: buildRuneData(),
+    items: editingItems.slice()
+  });
+  el.basicStatus.textContent = selectedMy.name + " の基本形として保存しました";
+  if (selectedEnemy) showSheet();
+});
 
 el.editButton.addEventListener("click", openEditor);
 el.createButton.addEventListener("click", openEditor);
@@ -1056,7 +1320,7 @@ function setDifficulty(value) {
 
 
 /* =========================================================
-   12) 保存
+   15) 保存
    ========================================================= */
 
 el.saveButton.addEventListener("click", function () {
@@ -1130,7 +1394,7 @@ function buildRuneData() {
 
 
 /* =========================================================
-   13) localStorage への読み書き
+   16) localStorage への読み書き
    ========================================================= */
 
 function makeKey(myId, enemyId) {
@@ -1153,7 +1417,7 @@ function saveAllNotes(allNotes) {
 
 
 /* =========================================================
-   14) 対策ずみマッチアップの一覧
+   17) 対策ずみマッチアップの一覧
    ========================================================= */
 
 function renderSavedList() {
@@ -1254,15 +1518,16 @@ function createSavedRow(note) {
 
 function openSavedNote(note) {
   const my = champions.find(function (c) { return c.id === note.myId; }) ||
-             { id: note.myId, name: note.myName, icon: note.myIcon };
+             { id: note.myId, name: note.myName, icon: note.myIcon, splash: "" };
   const enemy = champions.find(function (c) { return c.id === note.enemyId; }) ||
-                { id: note.enemyId, name: note.enemyName, icon: note.enemyIcon };
+                { id: note.enemyId, name: note.enemyName, icon: note.enemyIcon, splash: "" };
 
   if (!selectedMy || selectedMy.id !== my.id) {
     setMyChampion(my, true);
   }
 
   selectedEnemy = enemy;
+  skillTab = "enemy";
   renderGrid("enemy");
   el.editor.hidden = true;
   showSheet();
@@ -1273,7 +1538,7 @@ el.filterMine.addEventListener("change", renderSavedList);
 
 
 /* =========================================================
-   15) 日付を読みやすい形にする
+   18) 日付を読みやすい形にする
    ========================================================= */
 
 function formatDate(isoString) {
@@ -1288,7 +1553,7 @@ function formatDate(isoString) {
 
 
 /* =========================================================
-   16) ページを開いたら実行する
+   19) ページを開いたら実行する
    ========================================================= */
 
 loadChampions();

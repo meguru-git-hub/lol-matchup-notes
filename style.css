@@ -32,6 +32,12 @@
 
 * { box-sizing: border-box; }
 
+/* HTML の hidden 属性は「display: none」で効いているだけなので、
+   あとから .points { display: grid } のように display を指定すると
+   打ち消されて、隠したはずの要素が見えてしまう。
+   ここで hidden を最優先にして、確実に隠れるようにしておく。 */
+[hidden] { display: none !important; }
+
 body {
   margin: 0;
   background: var(--bg);
@@ -299,25 +305,67 @@ textarea:focus {
 .sheet,
 #editor { scroll-margin-top: 76px; }
 
+/* パネルの四隅に金色のかぎ括弧を出す（LoL のUIらしい枠の飾り） */
+.sheet::before,
+.sheet::after {
+  content: "";
+  position: absolute;
+  width: 13px;
+  height: 13px;
+  pointer-events: none;
+}
+
+.sheet::before {
+  top: -1px; left: -1px;
+  border-top: 2px solid var(--gold);
+  border-left: 2px solid var(--gold);
+}
+
+.sheet::after {
+  bottom: -1px; right: -1px;
+  border-bottom: 2px solid var(--gold);
+  border-right: 2px solid var(--gold);
+}
+
 .sheet-head {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 12px;
   flex-wrap: wrap;
-  padding-bottom: 14px;
-  margin-bottom: 16px;
-  border-bottom: 1px solid var(--line);
+  /* パネルの内側余白を打ち消して、背景の絵を端まで広げる */
+  margin: -18px -18px 16px;
+  padding: 15px 18px;
+  border-bottom: 1px solid var(--gold-dim);
+  /* 背景には相手のスプラッシュアートが入る（JavaScript が指定する）。
+     文字が読めるよう、上から濃い色をかぶせている。 */
+  background-size: cover;
+  background-position: center 22%;
 }
 
 .sheet-faces { display: flex; align-items: center; gap: 9px; }
+
+/* アイコンは押すとスキル欄が切り替わるボタンになっている */
+.sheet-face {
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  line-height: 0;
+}
 
 .sheet-icon {
   width: 48px;
   height: 48px;
   border: 1px solid var(--gold-dim);
+  display: block;
+  transition: border-color 0.12s;
 }
 
+.sheet-face:hover .sheet-icon { border-color: var(--gold); }
+
 .sheet-icon-enemy { border-color: var(--veryhard); }
+.sheet-face:hover .sheet-icon-enemy { border-color: #ff7b80; }
 
 .sheet-vs {
   font-family: var(--font-en);
@@ -431,6 +479,37 @@ textarea:focus {
   letter-spacing: 0.18em;
   color: var(--gold);
   margin-bottom: 7px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+/* このマッチアップ専用ではなく、チャンピオンの「基本形」を
+   出しているときにつく目印 */
+.basic-tag {
+  font-family: var(--font-ja);
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  font-weight: 700;
+  color: var(--teal);
+  border: 1px solid rgba(10,200,185,0.45);
+  padding: 0 5px;
+}
+
+/* 編集画面で基本形を出し入れするボタンの並び */
+.basic-actions {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-wrap: wrap;
+  padding-bottom: 12px;
+  margin-bottom: 12px;
+  border-bottom: 1px solid var(--line);
+}
+
+.basic-status {
+  font-size: 11px;
+  color: var(--faint);
 }
 
 .setup-runes, .setup-items {
@@ -538,7 +617,83 @@ textarea:focus {
 .phase p { margin: 0; font-size: 14px; white-space: pre-wrap; }
 
 /* ===========================================
-   相手のスキル（説明つき・動画つき）
+   スキル欄のタブ（相手／自分）
+   =========================================== */
+.skill-tabs {
+  display: flex;
+  gap: 5px;
+  padding: 10px 13px 0;
+}
+
+.skill-tab {
+  flex: 1;
+  padding: 7px 10px;
+  background: var(--deep);
+  border: 1px solid var(--line);
+  border-bottom: 2px solid var(--line);
+  color: var(--muted);
+  font-family: var(--font-ja);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.skill-tab:hover { color: var(--text); }
+
+/* いま見ているほうのタブ */
+.skill-tab.is-on {
+  color: var(--gold-lit);
+  border-bottom-color: var(--gold);
+  background: rgba(200,170,110,0.08);
+}
+
+/* ===========================================
+   チャンピオンの特徴（分類と能力の目安）
+   =========================================== */
+.champ-info {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 10px 13px 0;
+}
+
+.champ-tags { display: flex; gap: 5px; flex-wrap: wrap; }
+
+.champ-tag {
+  font-size: 11px;
+  color: var(--gold);
+  border: 1px solid var(--gold-dim);
+  padding: 1px 9px;
+}
+
+.champ-bars {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.champ-bar { display: flex; align-items: center; gap: 5px; }
+
+.champ-bar-label { font-size: 10px; color: var(--faint); }
+
+.champ-bar-track {
+  display: block;
+  width: 46px;
+  height: 5px;
+  background: var(--deep);
+  border: 1px solid var(--line);
+}
+
+.champ-bar-fill {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, var(--gold-dim), var(--gold));
+}
+
+/* ===========================================
+   スキル一覧（説明つき・動画つき）
    =========================================== */
 .spells { padding: 4px 13px 12px; }
 
@@ -583,7 +738,32 @@ textarea:focus {
   padding-left: 31px;   /* キーのぶんだけ字下げして読みやすくする */
   font-size: 13px;
   color: var(--muted);
-  line-height: 1.7;
+  line-height: 1.75;
+  /* Riot の説明文にある <br> を改行として表示するために必要 */
+  white-space: pre-wrap;
+}
+
+/* ===========================================
+   スキル説明文の中の色分け
+   Riot のデータに埋めこまれた <magicDamage> などのタグを、
+   ゲーム本編と同じように色で見分けられるようにする。
+   =========================================== */
+.kw-magic    { color: #45b6f2; }            /* 魔法ダメージ */
+.kw-physical { color: #f5a06a; }            /* 物理ダメージ */
+.kw-true     { color: var(--gold-lit); }    /* 確定ダメージ */
+.kw-heal     { color: #6ddf8e; }            /* 回復 */
+.kw-shield   { color: #d7c08a; }            /* シールド */
+.kw-speed    { color: var(--teal); }        /* 移動速度 */
+.kw-status   { color: #e3903f; }            /* 状態異常（スタンなど） */
+.kw-onhit    { color: #8fd8d2; }            /* 通常攻撃時の効果 */
+.kw-spell    { color: var(--gold-lit); }    /* スキル名 */
+
+/* 重要な用語と、自動効果/発動効果の見出し */
+.kw-major,
+.kw-label,
+.kw-em {
+  color: var(--gold);
+  font-weight: 700;
 }
 
 .spell-video { padding-left: 31px; }
